@@ -11,7 +11,7 @@
   "org_magic": "",
   "support_phone_number": "",
   "support_email_address": "",
-  "anchor_certs": [],
+  "anchor_certs": ["***base64-decoded DER certificate for url in configuration_web_url***"],
   "supervising_host_certs": [],
   "skip_setup_items": ["AppleID", "Android", "FileVault","Privacy","Siri","TOS","Diagnostics","Payment","Restore","ScreenTime"],
   "devices":[]
