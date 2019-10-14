@@ -21,6 +21,14 @@ $host_domain = '';
 $logo_path = '';
 $pathto_enrollgenerator = '';
 ###################################################################
+if (isset($_SERVER['HTTP_X_APPLE_ASPEN_DEVICEINFO'])){
+	$plist_match='/<plist[^>]*?>[\s\S]*?<\/plist>/mi';
+	$cms_envelope=base64_decode($_SERVER['HTTP_X_APPLE_ASPEN_DEVICEINFO']);
+	preg_match_all($plist_match, $cms_envelope, $plist, PREG_SET_ORDER, 0);
+	require_once '*pathto_PlistParser.php*';
+	$xmlParse = new PlistParser;
+	$device_info=$xmlParse->StringToArray( $plist[0][0] );
+}
 $pdo = new PDO ('mysql:host=localhost;charset=utf8mb4;dbname=' . $myDB, $myUser, $myPass);
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 if (isset($_GET['token'])){
