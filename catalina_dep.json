@@ -1,0 +1,18 @@
+{
+  "profile_name": "TEG Enroll 190727",
+  "url": "*micromdm_enroll_path*",
+  "allow_pairing": true,
+  "configuration_web_url": "*path_to_reg_oauth.php*",
+  "is_supervised": true,
+  "is_multi_user": false,
+  "is_mandatory": true,
+  "await_device_configured": true,
+  "is_mdm_removable": false,
+  "org_magic": "",
+  "support_phone_number": "",
+  "support_email_address": "",
+  "anchor_certs": [],
+  "supervising_host_certs": [],
+  "skip_setup_items": ["AppleID", "Android", "FileVault","Privacy","Siri","TOS","Diagnostics","Payment","Restore","ScreenTime"],
+  "devices":[]
+}
