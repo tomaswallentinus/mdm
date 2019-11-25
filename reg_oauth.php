@@ -25,7 +25,7 @@ if (isset($_SERVER['HTTP_X_APPLE_ASPEN_DEVICEINFO'])){
 	$plist_match='/<plist[^>]*?>[\s\S]*?<\/plist>/mi';
 	$cms_envelope=base64_decode($_SERVER['HTTP_X_APPLE_ASPEN_DEVICEINFO']);
 	preg_match_all($plist_match, $cms_envelope, $plist, PREG_SET_ORDER, 0);
-	require_once '*pathto_PlistParser.php*';
+	require_once 'PlistParser.php';
 	$xmlParse = new PlistParser;
 	$device_info=$xmlParse->StringToArray( $plist[0][0] );
 }
