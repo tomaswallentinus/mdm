@@ -1,15 +1,20 @@
 <?php
 $_GET = filter_input_array(INPUT_GET, FILTER_SANITIZE_STRING);
 $tegid='';
+$path_temp='path to temporary storage';
+$path_signcert='path to pem cert and key';
+$micromdm_path='';
+$base64_basiclogin = 'Basic *base64-auth to micromdm (username:password)*';
+
 if (isset($_GET['tegid'])){$tegid='?tegid=' . $_GET['tegid'];}
 function signMobileConfig (string $file_content) {
-	$file_full_pathname="*pathto_tempstorage*temp.mobileconfig";
+	$file_full_pathname=$path_temp . "temp.mobileconfig";
 	file_put_contents($file_full_pathname,$file_content);
     openssl_pkcs7_sign(
         $file_full_pathname,
         $file_full_pathname.'.sig',
-        "file://" . realpath("*pathto_sign_cert*mdmprofile_sign_cert.pem"),
-        "file://" . realpath("*pathto_sign_cert_key*mdmprofile_sign_key.pem"),
+        "file://" . realpath($path_signcert . "mdmprofile_sign_cert.pem"),
+        "file://" . realpath($path_signcert . "mdmprofile_sign_key.pem"),
         [], 0
     );
     $signed = file_get_contents($file_full_pathname.'.sig');
@@ -21,7 +26,7 @@ function signMobileConfig (string $file_content) {
     return $trimmed;
 }
 function mdmComm($data){
-	$ch = curl_init('*pathto_micromdm*');
+	$ch = curl_init($micromdm_path . '/v1/commands');
 	curl_setopt($ch, CURLOPT_VERBOSE, true);
 //	curl_setopt($ch, CURLOPT_STDERR, $out); 
 	curl_setopt($ch, CURLOPT_HEADER, true);
@@ -33,7 +38,7 @@ function mdmComm($data){
 	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
 		'Accept: application/json;charset=utf-8',
 		'Content-Type: application/json;charset=utf-8',
-		'Authorization: Basic *base64-auth to micromdm (username:password)*'
+		'Authorization: ' . $base64_basiclogin
 	));
 	$result = curl_exec($ch);
 	if (curl_error($ch)) {
