@@ -2,12 +2,88 @@
 $myUser = '';
 $myPass = '';
 $myDB = '';
+$base64_basiclogin = 'base64-encoded basic-login for micromdm';
+$micromdm_path = '';
 $pdo = new PDO ('mysql:host=localhost;charset=utf8mb4;dbname=' . $myDB, $myUser, $myPass);
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 $log_entry=json_decode(file_get_contents('php://input'));
 
 $computer=array();
+
+
+function DeviceConfigured($udid){
+	$payload=array(
+		"request_type"		=> 'DeviceConfigured',
+		"udid"			=> $udid
+	);
+	$data_string = json_encode($payload, JSON_UNESCAPED_SLASHES);
+	mdmComm($data_string);
+}
+function AccountConfiguration($udid,$shortname,$fullname){
+	$payload=array(
+		"request_type"					=> 'AccountConfiguration',
+		"udid"						=> $udid,
+		"skip_primary_setup_account_creation"		=> false,
+		"set_primary_setup_account_as_regular_user"	=> false,
+		"lock_primary_account_info" 			=> true,
+		"primary_account_username" 			=> $shortname,
+		"primary_account_full_name" 			=> $fullname,
+		"auto_setup_admin_accounts"			=> [array(
+			"short_name" => $shortname . "_1",
+			"password_hash" => ""
+		)]
+	);
+	$data_string = json_encode($payload, JSON_UNESCAPED_SLASHES);
+	mdmComm($data_string);
+}
+function InstallApplication($manifest,$udid){
+	$payload=array(
+		"request_type"		=> 'InstallApplication',
+		"udid"				=> $udid,
+		"manifest_url"		=> $manifest,
+		"management_flags"	=> 1
+	);
+	$data_string = json_encode($payload, JSON_UNESCAPED_SLASHES);
+	mdmComm($data_string);
+}
+function InstallProfile($udid,$profile){
+	$payload=array(
+		"request_type"		=> 'InstallProfile',
+		"udid"				=> $udid,
+		"payload"			=> signMobileConfig ($profile),
+		"management_flags"	=> 1
+	);
+	$data_string = json_encode($payload, JSON_UNESCAPED_SLASHES);
+	mdmComm($data_string);
+}
+function mdmComm($data){
+//	print_r($data);
+	$ch = curl_init($micromdm_path . '/v1/commands');
+	curl_setopt($ch, CURLOPT_VERBOSE, true);
+//	curl_setopt($ch, CURLOPT_STDERR, $out); 
+	curl_setopt($ch, CURLOPT_HEADER, true);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);                                                       
+	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');   
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+	curl_setopt($ch, CURLOPT_FAILONERROR,true);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+		'Accept: application/json;charset=utf-8',
+		'Content-Type: application/json;charset=utf-8',
+		'Authorization: ' . $base64_basiclogin
+	));
+	$result = curl_exec($ch);
+	if (curl_error($ch)) {
+		$error_msg = curl_error($ch);
+	}
+//print_r(curl_getinfo($ch,CURLINFO_HEADER_OUT));
+	curl_close($ch);
+	if (isset($error_msg)) {
+		echo 'Error: ';
+		print_r($error_msg);
+	}
+}
 
 switch ($log_entry->topic) {
 	case "mdm.Connect":
@@ -74,7 +150,7 @@ switch ($log_entry->topic) {
 		if (isset($log_entry->checkin_event->url_params->tegid)){
 			$tegid=json_decode($log_entry->checkin_event->url_params->tegid);
 			if ($tegid!=''){
-				$stmt = $pdo->prepare("select google_id,google_user from approvals where approval_id=:tegid");
+				$stmt = $pdo->prepare("select google_id,google_user,google_namn from approvals where approval_id=:tegid");
 				$stmt->execute(array(
 					':tegid'		=>	$tegid
 				));
@@ -82,6 +158,7 @@ switch ($log_entry->topic) {
 				if (count($approvals)>0){
 					$google_id=$approvals[0]['google_id'];
 					$google_user=$approvals[0]['google_user'];
+					$google_user_namn=$approvals[0]['google_namn'];
 				}
 			}
 		}
@@ -91,6 +168,7 @@ switch ($log_entry->topic) {
 		$result = $xml->xpath("//key[.='SerialNumber']/following-sibling::string");
 		$serialnumber = filter_var((string)$result[0], FILTER_SANITIZE_STRING);
 		if ($serialnumber!='' && $udid!=''){
+			/*Blueprint-part (InstallApplication,InstallProfile)*/
 			if ($google_id!=''){
 				$stmt = $pdo->prepare("INSERT INTO computers (computer_serial,udid,mdm_checkin,mdm_status,google_id,google_user,mdm_update) VALUES (:serial,:udid,now(),1,:google_id,:google_user,now()) ON DUPLICATE KEY UPDATE udid=:udid,mdm_checkin=now(),mdm_status=1,google_id=:google_id,google_user=:google_user,FIRMWARE_PASSWORD='',FIRMWARE_HASH='',computer_mdm=''");
 				$stmt->execute(array(
@@ -99,6 +177,11 @@ switch ($log_entry->topic) {
 					':google_id'	=>	$google_id,
 					':google_user'	=>	$google_user
 				));
+				/*Prefill user setup *work in progress* */
+				if (strpos($google_user, '@')){
+					$google_user=strstr($google_user, '@', true);
+					AccountConfiguration($udid,$google_user,$google_user_namn);
+				}
 			} else {
 				$stmt = $pdo->prepare("INSERT INTO computers (computer_serial,udid,mdm_checkin,mdm_status,mdm_update) VALUES (:serial,:udid,now(),1,now()) ON DUPLICATE KEY UPDATE udid=:udid,mdm_checkin=now(),mdm_status=1,FIRMWARE_PASSWORD='',FIRMWARE_HASH='',computer_mdm=''");
 				$stmt->execute(array(
@@ -106,6 +189,8 @@ switch ($log_entry->topic) {
 					':udid'			=>	$udid
 				));
 			}
+			/*Send deviceConfigured-command to continue setup*/
+			DeviceConfigured($udid);
 		}
 		
 		break;
