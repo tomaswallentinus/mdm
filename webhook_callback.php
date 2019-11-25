@@ -4,6 +4,9 @@ $myPass = '';
 $myDB = '';
 $base64_basiclogin = 'base64-encoded basic-login for micromdm';
 $micromdm_path = '';
+$path_temp='path to temporary storage';
+$path_signcert='path to pem cert and key';
+
 $pdo = new PDO ('mysql:host=localhost;charset=utf8mb4;dbname=' . $myDB, $myUser, $myPass);
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
@@ -11,7 +14,22 @@ $log_entry=json_decode(file_get_contents('php://input'));
 
 $computer=array();
 
-
+function signMobileConfig (string $file_content) {
+	$file_full_pathname=$path_temp . "temp.mobileconfig";
+	file_put_contents($file_full_pathname,$file_content);
+    openssl_pkcs7_sign(
+        $file_full_pathname,
+        $file_full_pathname.'.sig',
+        "file://" . realpath($path_signcert . "mdmprofile_sign_cert.pem"),
+        "file://" . realpath($path_signcert . "mdmprofile_sign_key.pem"),
+        [], 0
+    );
+    $signed = file_get_contents($file_full_pathname.'.sig');
+    unlink($file_full_pathname.'.sig');
+    unlink($file_full_pathname);
+    $trimmed = preg_replace('/(.+\n)+\n/', '', $signed, 1);
+    return $trimmed;
+}
 function DeviceConfigured($udid){
 	$payload=array(
 		"request_type"		=> 'DeviceConfigured',
@@ -40,7 +58,7 @@ function AccountConfiguration($udid,$shortname,$fullname){
 function InstallApplication($manifest,$udid){
 	$payload=array(
 		"request_type"		=> 'InstallApplication',
-		"udid"				=> $udid,
+		"udid"			=> $udid,
 		"manifest_url"		=> $manifest,
 		"management_flags"	=> 1
 	);
@@ -50,8 +68,8 @@ function InstallApplication($manifest,$udid){
 function InstallProfile($udid,$profile){
 	$payload=array(
 		"request_type"		=> 'InstallProfile',
-		"udid"				=> $udid,
-		"payload"			=> signMobileConfig ($profile),
+		"udid"			=> $udid,
+		"payload"		=> signMobileConfig ($profile),
 		"management_flags"	=> 1
 	);
 	$data_string = json_encode($payload, JSON_UNESCAPED_SLASHES);
@@ -168,7 +186,7 @@ switch ($log_entry->topic) {
 		$result = $xml->xpath("//key[.='SerialNumber']/following-sibling::string");
 		$serialnumber = filter_var((string)$result[0], FILTER_SANITIZE_STRING);
 		if ($serialnumber!='' && $udid!=''){
-			/*Blueprint-part (InstallApplication,InstallProfile)*/
+			/*Blueprint-part (InstallApplication,InstallProfile and so on)*/
 			if ($google_id!=''){
 				$stmt = $pdo->prepare("INSERT INTO computers (computer_serial,udid,mdm_checkin,mdm_status,google_id,google_user,mdm_update) VALUES (:serial,:udid,now(),1,:google_id,:google_user,now()) ON DUPLICATE KEY UPDATE udid=:udid,mdm_checkin=now(),mdm_status=1,google_id=:google_id,google_user=:google_user,FIRMWARE_PASSWORD='',FIRMWARE_HASH='',computer_mdm=''");
 				$stmt->execute(array(
