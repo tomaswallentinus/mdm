@@ -113,8 +113,9 @@ if (isset($_SESSION['access_token_mdm']) && $_SESSION['access_token_mdm']) {
 		$user = $service->userinfo->get();
 		if (isset($user->email)){
 			if ($tegid!=''){
-				$stmt = $pdo->prepare("update approvals set google_id=:id,google_user=:email WHERE approval_id=:tegid");
-				$stmt->execute(array(':id'=>$user->id,':email'=>$user->email,':tegid'=> $tegid));
+				$google_namn=$user->givenName . ' ' . $user->familyName;
+				$stmt = $pdo->prepare("update approvals set google_id=:id,google_user=:email,google_namn=:google_namn WHERE approval_id=:tegid");
+				$stmt->execute(array(':id'=>$user->id,':email'=>$user->email,':google_namn'=>$google_namn,':tegid'=> $tegid));
 				echo '<meta http-equiv="refresh" content="4;URL=\'' . $pathto_enrollgenerator . '?tegid=' . $tegid . '" />';
 				echo '</head><body><div><img src="' . $logo_path . '">';
 				echo '<h1>Tack ' . $user->givenName . ' för att du registrerade datorn</h1><p>Snart fortsätter installationen.</p>';
