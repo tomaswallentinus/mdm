@@ -1,11 +1,9 @@
 <?php
+/* Import common functions */
+require_once( 'mdm_commands.php' );
+
 $_GET = filter_input_array(INPUT_GET, FILTER_SANITIZE_STRING);
 $tegid='';
-$path_temp='path to temporary storage';
-$path_signcert='path to pem cert and key';
-$micromdm_path='';
-$base64_basiclogin = 'Basic *base64-auth to micromdm (username:password)*';
-
 if (isset($_GET['tegid'])){$tegid='?tegid=' . $_GET['tegid'];}
 
 $enroll='*****Your enrollment profile from micromdm but changing the following items:
