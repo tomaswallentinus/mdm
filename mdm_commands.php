@@ -5,24 +5,6 @@ $micromdm_path = '';
 $path_temp='path to temporary storage';
 $path_signcert='path to pem cert and key';
 
-function signMobileConfig (string $file_content) {
-	$file_full_pathname=$path_temp . "temp.mobileconfig";
-	file_put_contents($file_full_pathname,$file_content);
-    openssl_pkcs7_sign(
-        $file_full_pathname,
-        $file_full_pathname.'.sig',
-        "file://" . realpath($path_signcert . "mdmprofile_sign_cert.pem"),
-        "file://" . realpath($path_signcert . "mdmprofile_sign_key.pem"),
-        [], 0
-    );
-    $signed = file_get_contents($file_full_pathname.'.sig');
-
-    unlink($file_full_pathname.'.sig');
-    unlink($file_full_pathname);
-
-    $trimmed = preg_replace('/(.+\n)+\n/', '', $signed, 1);
-    return $trimmed;
-}
 function mdmComm($data){
 	$ch = curl_init($micromdm_path . '/v1/commands');
 	curl_setopt($ch, CURLOPT_VERBOSE, true);
@@ -90,5 +72,23 @@ function InstallProfile($udid,$profile){
 	);
 	$data_string = json_encode($payload, JSON_UNESCAPED_SLASHES);
 	mdmComm($data_string);
+}
+function signMobileConfig (string $file_content) {
+	$file_full_pathname=$path_temp . "temp.mobileconfig";
+	file_put_contents($file_full_pathname,$file_content);
+    openssl_pkcs7_sign(
+        $file_full_pathname,
+        $file_full_pathname.'.sig',
+        "file://" . realpath($path_signcert . "mdmprofile_sign_cert.pem"),
+        "file://" . realpath($path_signcert . "mdmprofile_sign_key.pem"),
+        [], 0
+    );
+    $signed = file_get_contents($file_full_pathname.'.sig');
+
+    unlink($file_full_pathname.'.sig');
+    unlink($file_full_pathname);
+
+    $trimmed = preg_replace('/(.+\n)+\n/', '', $signed, 1);
+    return $trimmed;
 }
 ?>
