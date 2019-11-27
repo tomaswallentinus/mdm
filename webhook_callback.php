@@ -3,6 +3,12 @@ $myUser = '';
 $myPass = '';
 $myDB = '';
 
+/* Import common functions */
+require_once( 'mdm_commands.php' );
+
+/* Import the Google Api library */
+require_once( $_SERVER['DOCUMENT_ROOT'] . '\Google\autoload.php' );
+
 $pdo = new PDO ('mysql:host=localhost;charset=utf8mb4;dbname=' . $myDB, $myUser, $myPass);
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
@@ -93,6 +99,7 @@ switch ($log_entry->topic) {
 		if ($serialnumber!='' && $udid!=''){
 			/*Blueprint-part (InstallApplication,InstallProfile and so on)*/
 			if ($google_id!=''){
+				
 				$stmt = $pdo->prepare("INSERT INTO computers (computer_serial,udid,mdm_checkin,mdm_status,google_id,google_user,mdm_update) VALUES (:serial,:udid,now(),1,:google_id,:google_user,now()) ON DUPLICATE KEY UPDATE udid=:udid,mdm_checkin=now(),mdm_status=1,google_id=:google_id,google_user=:google_user,FIRMWARE_PASSWORD='',FIRMWARE_HASH='',computer_mdm=''");
 				$stmt->execute(array(
 					':serial'		=>	$serialnumber,
@@ -100,7 +107,51 @@ switch ($log_entry->topic) {
 					':google_id'	=>	$google_id,
 					':google_user'	=>	$google_user
 				));
-				/*Prefill user setup *work in progress* */
+				
+				/* Use service account to get users groups and org-unit */
+				$key = file_get_contents('google.p12-file');
+				$service_account = 'service account email';
+				$scope_arr = array('https://www.googleapis.com/auth/admin.directory.group','https://www.googleapis.com/auth/admin.directory.user');
+				$admin_user = 'admin email';
+				
+				$service_client = new Google_Client();
+				$service_client->setApplicationName("Apple registrering dir");
+				$cred = new Google_Auth_AssertionCredentials(
+					$service_account,
+					$scope_arr,
+					$key
+				);
+				$cred->sub = $admin_user;
+				$service_client->setAssertionCredentials($cred);
+				if ($service_client->getAuth()->isAccessTokenExpired()) {
+				  $service_client->getAuth()->refreshTokenWithAssertion($cred);
+				}
+				
+				$directory = new Google_Service_Directory($service_client);
+				/*
+				//Blueprint based on orgunit: 
+				$dir_user = $directory->users->get($user->id,array(
+					'fields' => 'orgUnitPath'
+				));
+				if ($dir_user->getOrgUnitPath()=='What ever org unit'){
+					//Add profiles and so on
+				}
+				*/
+				$dir_groups = $directory->groups->listGroups(array(
+					'userKey' => $google_id,
+					'fields' => 'groups(email)'
+				));
+				$groups_arr = $dir_groups->getGroups();
+				if (count($groups_arr)>0){
+					foreach($groups_arr as $group){
+						/* Blueprint based on groups */
+						if ($group->email=='what ever group'){
+							//Add profiles and so on
+						}
+					}
+				}
+				
+				/* Prefill user creation screen */
 				if (strpos($google_user, '@')){
 					$google_user=strstr($google_user, '@', true);
 					AccountConfiguration($udid,$google_user,$google_user_namn);
@@ -112,7 +163,9 @@ switch ($log_entry->topic) {
 					':udid'			=>	$udid
 				));
 			}
-			/*Send deviceConfigured-command to continue setup*/
+			
+			/* Send deviceConfigured-command to continue setup */
+			sleep(5); //to quick to continue if not?
 			DeviceConfigured($udid);
 		}
 		
