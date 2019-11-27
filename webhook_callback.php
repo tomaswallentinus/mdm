@@ -6,9 +6,6 @@ $myDB = '';
 /* Import common functions */
 require_once( 'mdm_commands.php' );
 
-/* Import the Google Api library */
-require_once( $_SERVER['DOCUMENT_ROOT'] . '\Google\autoload.php' );
-
 $pdo = new PDO ('mysql:host=localhost;charset=utf8mb4;dbname=' . $myDB, $myUser, $myPass);
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
@@ -109,6 +106,10 @@ switch ($log_entry->topic) {
 				));
 				
 				/* Use service account to get users groups and org-unit */
+
+				/* Import the Google Api library */
+				require_once( $_SERVER['DOCUMENT_ROOT'] . '\Google\autoload.php' );
+				
 				$key = file_get_contents('google.p12-file');
 				$service_account = 'service account email';
 				$scope_arr = array('https://www.googleapis.com/auth/admin.directory.group','https://www.googleapis.com/auth/admin.directory.user');
