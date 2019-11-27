@@ -19,7 +19,6 @@ $myDB = '';
 $transport_salt = '';
 $host_domain = '';
 $logo_path = '';
-$pathto_enrollgenerator = '';
 ###################################################################
 if (isset($_SERVER['HTTP_X_APPLE_ASPEN_DEVICEINFO'])){
 	$plist_match='/<plist[^>]*?>[\s\S]*?<\/plist>/mi';
@@ -85,6 +84,9 @@ if (isset($_GET['code'])) {
 //if we have access_token continue, or else get login URL for user
 if (isset($_SESSION['access_token_mdm']) && $_SESSION['access_token_mdm']) {
   $client->setAccessToken($_SESSION['access_token_mdm']);
+  if ($client->isAccessTokenExpired()){
+	$authUrl = $client->createAuthUrl();
+  }
 } else {
   $authUrl = $client->createAuthUrl();
 }
@@ -116,7 +118,7 @@ if (isset($_SESSION['access_token_mdm']) && $_SESSION['access_token_mdm']) {
 				$google_namn=$user->givenName . ' ' . $user->familyName;
 				$stmt = $pdo->prepare("update approvals set google_id=:id,google_user=:email,google_namn=:google_namn WHERE approval_id=:tegid");
 				$stmt->execute(array(':id'=>$user->id,':email'=>$user->email,':google_namn'=>$google_namn,':tegid'=> $tegid));
-				echo '<meta http-equiv="refresh" content="4;URL=\'' . $pathto_enrollgenerator . '?tegid=' . $tegid . '" />';
+				echo '<meta http-equiv="refresh" content="4;URL=\'enrollmentgenerator.php?tegid=' . $tegid . '" />';
 				echo '</head><body><div><img src="' . $logo_path . '">';
 				echo '<h1>Tack ' . $user->givenName . ' för att du registrerade datorn</h1><p>Snart fortsätter installationen.</p>';
 			} else {
