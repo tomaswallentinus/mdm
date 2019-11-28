@@ -3,6 +3,8 @@ $myUser = '';
 $myPass = '';
 $myDB = '';
 
+/* Ad a proper login-handler */
+
 /* Import common functions */
 require_once( 'mdm_commands.php' );
 
@@ -30,7 +32,7 @@ switch ($log_entry->topic) {
 					$xmlParse = new PlistParser;
 					$xml=$xmlParse->StringToArray( $raw_payload );
 					if (isset($xml['ProfileList'])){
-						$stmt = $pdo->prepare("update computer_profiles set profile_status=0 where computer_serial=:serial and profile_status=1");
+						$stmt = $pdo->prepare("update computer_profiles set profile_status=0 where computer_serial=:serial and profile_status in (1,3)");
 						$stmt->execute(array(
 							':serial'		=>	$check[0]['computer_serial']
 						));
