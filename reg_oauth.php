@@ -3,6 +3,8 @@ ini_set('session.gc_maxlifetime', 3600);
 session_set_cookie_params(3600);
 session_start();
 
+/* Ad a proper login-handler */
+
 /* Import the Google Api library */
 require_once $_SERVER['DOCUMENT_ROOT'] . "/Google/autoload.php";
 
