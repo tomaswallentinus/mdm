@@ -13,6 +13,7 @@ class PlistParser
 	      PARSE_DICT = "parseDict",
 	      PARSE_ARRAY = "parseArray"
 	;
+	//New function string xml
 	public function StringToArray( $string )
 	{
 
